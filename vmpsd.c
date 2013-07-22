@@ -9,6 +9,8 @@
 #include <unistd.h>
 #endif
 
+#include <getopt.h>
+
 #include "vqp.h"
 #include "log.h"
 #include "external.h"
@@ -17,20 +19,28 @@ struct in_addr	bind_address;
 unsigned int	port_number = 1589;
 char    	db_fname[256];
 int		default_behaviour = 0;
+char            pid_fname[256];
 
 int parse_options(int argc, char **argv)
 {
 	char	opt;
 	char	*options = "a:cde:f:l:p:";
+        int     option_index = 0;
+
+        static struct option long_options[] = {
+            {"pidfile", required_argument, 0, 'r'},
+            {0, 0, 0, 0}
+         };
 
 	opterr = 0;
 	
-	opt = getopt(argc, argv, options);
+	opt = getopt_long(argc, argv, options, long_options, &option_index);
 	while ( opt > 0 ) {
 
 		switch (opt) {
 
 			case 'a':
+                                printf ("option a with arg %s", optarg);
 				if ( optarg == NULL ) return 0;
 				if ( !inet_aton(optarg, &bind_address) ) return 0;	
 				break;
@@ -62,11 +72,16 @@ int parse_options(int argc, char **argv)
 				if ( sscanf(optarg,"%d",&port_number) != 1) return 0;
 				break;
 
+			case 'r':
+				strncpy(pid_fname, optarg, 255);
+				pid_fname[255] = '\0';
+				break;
+
 			default:
 				return 0;
 				break;
 		}
-		opt = getopt(argc, argv, options);
+		opt = getopt_long(argc, argv, options, long_options, &option_index);
 	}
 
 	return 1;
@@ -92,6 +107,7 @@ void usage()
 	printf("\t                 0x0002 - parser,\n");
 	printf("\t                 0x0004 - vqp\n");
 	printf("\t-p port    port to listen on (1589)\n");
+	printf("\t--pidfile <pidfile>    where to write a pidfile.  If the option is not given, no pidfile will be written\n");
 	printf("\n");
 }
 

@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 #ifdef	SETPGRP_VOID
 #define SYSV
@@ -40,6 +41,20 @@ RETSIGTYPE sig_child()
 
 }
 
+extern char pid_fname[];
+
+void create_pidfile(int childpid) {
+
+        if (*pid_fname != 0) {
+                vmps_log(SYSTEM|FATAL, "Child PID: %d", childpid);
+
+                FILE *fh;
+                if ( (fh = fopen(pid_fname, "w")) >= 0 ) {
+                        fprintf(fh, "%d", childpid);
+                }
+        }
+}
+
 void daemon_start(ignsigcld)
 
 	int	ignsigcld;	
@@ -65,9 +80,13 @@ void daemon_start(ignsigcld)
 		exit(1);
 	} 
 
-	if ( childpid > 0 ) exit(0); 
-
 #ifdef 	VMPS_CHECK_BSD
+
+	if ( childpid > 0 ) {
+            create_pidfile(childpid);
+
+            exit(0);
+        }
 
 	if ( setpgrp(0, getpid()) == -1 ) {
 		vmps_log(SYSTEM|FATAL, "can't change process group");
@@ -81,6 +100,8 @@ void daemon_start(ignsigcld)
 
 #else
 
+	if ( childpid > 0 ) exit(0);
+
 	if ( setpgrp() == -1 ) {
 		vmps_log(SYSTEM|FATAL, "can't change process group");
 		exit(1);
@@ -92,8 +113,12 @@ void daemon_start(ignsigcld)
 		exit(1);
 	}
 
-	if ( childpid > 0 ) exit(0);
-		
+	if ( childpid > 0 ) {
+            create_pidfile(childpid);
+
+            exit(0);
+        }
+
 #endif
 
 	for ( fd = 0; fd <= 2; fd++ ) close(fd);
@@ -113,4 +138,3 @@ void daemon_start(ignsigcld)
 
 	}
 }
-
